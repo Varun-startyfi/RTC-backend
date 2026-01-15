@@ -2,20 +2,17 @@ const { Sequelize } = require('sequelize');
 const config = require('../config');
 
 /**
- * Local PostgreSQL Database Configuration
- * This module provides database connection for local PostgreSQL
- * Activated when DB_PROVIDER=local in environment variables
+ * PostgreSQL Database Configuration
+ * Supports both connection string (DATABASE_URL) or individual parameters
  */
 
-// Initialize Sequelize with individual connection parameters
-const sequelize = new Sequelize(
-  config.database.database,
-  config.database.username,
-  config.database.password,
-  {
-    host: config.database.host,
-    port: config.database.port,
-    dialect: config.database.dialect,
+// Initialize Sequelize - supports both connection string and individual parameters
+let sequelize;
+
+if (config.database.url) {
+  // Use connection string (e.g., Neon, Supabase, etc.)
+  sequelize = new Sequelize(config.database.url, {
+    dialect: 'postgres',
     dialectOptions: config.database.dialectOptions || {},
     logging: config.database.logging,
     pool: config.database.pool,
@@ -23,16 +20,37 @@ const sequelize = new Sequelize(
       timestamps: true,
       underscored: true,
     },
-  }
-);
+  });
+} else {
+  // Use individual parameters (local PostgreSQL)
+  sequelize = new Sequelize(
+    config.database.database,
+    config.database.username,
+    config.database.password,
+    {
+      host: config.database.host,
+      port: config.database.port,
+      dialect: config.database.dialect,
+      dialectOptions: config.database.dialectOptions || {},
+      logging: config.database.logging,
+      pool: config.database.pool,
+      define: {
+        timestamps: true,
+        underscored: true,
+      },
+    }
+  );
+}
 
-// Test local database connection
+// Test database connection
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Local PostgreSQL database connection established successfully.');
+    const dbType = config.database.url ? 'PostgreSQL (Connection String)' : 'Local PostgreSQL';
+    console.log(`✅ ${dbType} database connection established successfully.`);
   } catch (error) {
-    console.error('❌ Unable to connect to local PostgreSQL database:', error.message);
+    const dbType = config.database.url ? 'PostgreSQL' : 'Local PostgreSQL';
+    console.error(`❌ Unable to connect to ${dbType} database:`, error.message);
     throw error;
   }
 };
@@ -40,24 +58,46 @@ const testConnection = async () => {
 // Sync database schema (create tables if they don't exist)
 const syncDatabase = async () => {
   try {
-    // Use alter: true for development (local PostgreSQL)
-    await sequelize.sync({ alter: true });
-    console.log('✅ Local PostgreSQL database synchronized successfully.');
+    // Use alter: true for development, false for production
+    const alterMode = process.env.NODE_ENV === 'development' && process.env.DB_ALTER !== 'false';
+    await sequelize.sync({ alter: alterMode });
+    const dbType = config.database.url ? 'PostgreSQL' : 'Local PostgreSQL';
+    console.log(`✅ ${dbType} database synchronized successfully.`);
   } catch (error) {
-    console.error('❌ Error synchronizing local PostgreSQL database:', error.message);
+    const dbType = config.database.url ? 'PostgreSQL' : 'Local PostgreSQL';
+    console.error(`❌ Error synchronizing ${dbType} database:`, error.message);
     throw error;
   }
 };
 
 // Get database connection info (for logging)
 const getConnectionInfo = () => {
-  return {
-    provider: 'Local PostgreSQL',
-    host: config.database.host,
-    port: config.database.port,
-    database: config.database.database,
-    ssl: false
-  };
+  if (config.database.url) {
+    try {
+      const url = new URL(config.database.url);
+      return {
+        provider: 'PostgreSQL (Connection String)',
+        host: url.hostname,
+        port: url.port || '5432',
+        database: url.pathname.slice(1) || 'postgres',
+        ssl: true
+      };
+    } catch (error) {
+      return {
+        provider: 'PostgreSQL (Connection String)',
+        host: 'unknown',
+        ssl: true
+      };
+    }
+  } else {
+    return {
+      provider: 'Local PostgreSQL',
+      host: config.database.host,
+      port: config.database.port,
+      database: config.database.database,
+      ssl: false
+    };
+  }
 };
 
 module.exports = {

@@ -11,60 +11,22 @@ const path = require('path');
 require('dotenv').config();
 
 async function initDatabase() {
-  // Use DB_PROVIDER flag to determine database configuration
-  const dbProvider = (process.env.DB_PROVIDER || 'local').toLowerCase()
-  const useSupabase = dbProvider === 'supabase'
-  const useLocal = dbProvider === 'local'
-
-  if (!useSupabase && !useLocal) {
-    console.error(`❌ Invalid DB_PROVIDER: "${dbProvider}"`)
-    console.error('   Valid options: "local" (PostgreSQL) or "supabase"')
-    console.error('\nPlease set DB_PROVIDER in your .env file based on env-example.txt.')
+  // Local PostgreSQL configuration
+  if (!process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_PASSWORD) {
+    console.error('❌ Local PostgreSQL mode: DB_NAME, DB_USER, and DB_PASSWORD are required')
     process.exit(1)
   }
 
-  let config;
-  let connectDatabase;
-  let sslConfig;
-
-  if (useSupabase) {
-    // Supabase configuration (connection string)
-    if (!process.env.DATABASE_URL) {
-      console.error('❌ Supabase mode: DATABASE_URL is required')
-      console.error('   Get it from: Supabase Dashboard > Settings > Database > Connection string > URI')
-      process.exit(1)
-    }
-
-    // Parse connection string (format: postgresql://user:password@host:port/database)
-    const url = new URL(process.env.DATABASE_URL);
-    config = {
-      host: url.hostname,
-      port: parseInt(url.port || '5432', 10),
-      database: url.pathname.slice(1) || 'postgres', // Remove leading /
-      user: url.username,
-      password: url.password,
-    };
-    connectDatabase = config.database; // Connect directly to the target database
-    sslConfig = { rejectUnauthorized: false }; // Supabase requires SSL
-    console.log('📦 Using Supabase (Production)');
-  } else {
-    // Local PostgreSQL configuration
-    if (!process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_PASSWORD) {
-      console.error('❌ Local PostgreSQL mode: DB_NAME, DB_USER, and DB_PASSWORD are required')
-      process.exit(1)
-    }
-
-    config = {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-    };
-    connectDatabase = 'postgres'; // For local, connect to default postgres database first
-    sslConfig = false; // No SSL for local by default
-    console.log('📦 Using Local PostgreSQL (Development)');
-  }
+  const config = {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+  };
+  const connectDatabase = 'postgres'; // For local, connect to default postgres database first
+  const sslConfig = false; // No SSL for local by default
+  console.log('📦 Using Local PostgreSQL');
 
   console.log('🔄 Initializing database...');
   console.log(`📍 Connecting to: ${config.host}:${config.port}/${config.database}`);
@@ -80,33 +42,26 @@ async function initDatabase() {
     await client.connect();
     console.log('✅ Connected to PostgreSQL');
 
-    let dbClient = client;
-
-    // Create database if it doesn't exist (only for local PostgreSQL, not Supabase)
-    if (useLocal) {
-      try {
-        await client.query(`CREATE DATABASE "${config.database}"`);
-        console.log(`📦 Created database: ${config.database}`);
-      } catch (error) {
-        if (error.code === '42P04') {
-          console.log(`📦 Database ${config.database} already exists`);
-        } else {
-          throw error;
-        }
+    // Create database if it doesn't exist
+    try {
+      await client.query(`CREATE DATABASE "${config.database}"`);
+      console.log(`📦 Created database: ${config.database}`);
+    } catch (error) {
+      if (error.code === '42P04') {
+        console.log(`📦 Database ${config.database} already exists`);
+      } else {
+        throw error;
       }
-
-      // Close connection and reconnect to the target database
-      await client.end();
-
-      dbClient = new Client({
-        ...config,
-        ssl: false // Reconnect to target DB without SSL for local
-      });
-      await dbClient.connect();
-    } else {
-      // For Supabase, we're already connected to the target database
-      dbClient = client;
     }
+
+    // Close connection and reconnect to the target database
+    await client.end();
+
+    const dbClient = new Client({
+      ...config,
+      ssl: false // Reconnect to target DB without SSL for local
+    });
+    await dbClient.connect();
     
     console.log(`✅ Connected to database: ${config.database}`);
 

@@ -2,27 +2,11 @@ const config = require('../config');
 
 /**
  * Database Models Index
- * Uses DB_PROVIDER flag to determine which database provider to use:
- * - 'supabase' -> uses models/supabase.js
- * - 'local' -> uses models/local.js
+ * Uses local PostgreSQL database
  */
 
-// Determine database provider from config (which already validates the flag)
-const { databaseProvider } = config;
-const { provider: dbProvider, useSupabase, useLocal } = databaseProvider;
-
-// Load appropriate database module based on flag
-let dbModule;
-if (useSupabase) {
-  dbModule = require('./supabase');
-} else if (useLocal) {
-  dbModule = require('./local');
-} else {
-  // This should not happen as config.js validates it, but keep as safety check
-  console.error(`❌ Invalid DB_PROVIDER: "${dbProvider}"`);
-  console.error('   Valid options: "local" (PostgreSQL) or "supabase"');
-  process.exit(1);
-}
+// Load local database module
+const dbModule = require('./local');
 
 // Extract database connection and utilities
 const { sequelize, Sequelize, testConnection, syncDatabase, getConnectionInfo } = dbModule;

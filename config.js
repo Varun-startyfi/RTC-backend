@@ -16,36 +16,22 @@ const requiredEnvVars = [
   'AGORA_APP_CERTIFICATE'
 ]
 
-// Database configuration strategy:
-// Use DB_PROVIDER environment flag to choose between 'local' (PostgreSQL) or 'supabase'
-// Default to 'local' for development if not set
-const dbProvider = (process.env.DB_PROVIDER || 'local').toLowerCase()
-const useSupabase = dbProvider === 'supabase'
-const useLocal = dbProvider === 'local'
+// Validate required database configuration
+// Support both connection string (DATABASE_URL) or individual parameters
+const useConnectionString = !!process.env.DATABASE_URL
+const useIndividualParams = !!(process.env.DB_NAME && process.env.DB_USER && process.env.DB_PASSWORD)
 
-// Validate required database configuration based on provider
-if (useSupabase) {
-  if (!process.env.DATABASE_URL) {
-    requiredEnvVars.push('DATABASE_URL')
-    console.error('❌ Supabase mode: DATABASE_URL is required')
-    console.error('   Get it from: Supabase Dashboard > Settings > Database > Connection string > URI')
-  }
-} else if (useLocal) {
-  if (!process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_PASSWORD) {
-    requiredEnvVars.push('DB_NAME', 'DB_USER', 'DB_PASSWORD')
-    console.error('❌ Local PostgreSQL mode: DB_NAME, DB_USER, and DB_PASSWORD are required')
-  }
-} else {
-  console.error(`❌ Invalid DB_PROVIDER: "${dbProvider}"`)
-  console.error('   Valid options: "local" (PostgreSQL) or "supabase"')
-  process.exit(1)
+if (!useConnectionString && !useIndividualParams) {
+  requiredEnvVars.push('DATABASE_URL or (DB_NAME, DB_USER, DB_PASSWORD)')
+  console.error('❌ Database configuration required:')
+  console.error('   Option 1: Set DATABASE_URL (connection string)')
+  console.error('   Option 2: Set DB_NAME, DB_USER, and DB_PASSWORD (individual parameters)')
 }
 
-// Log which database configuration is being used
-if (useSupabase) {
-  console.log('📦 Database: Supabase (Production)')
+if (useConnectionString) {
+  console.log('📦 Database: PostgreSQL (Connection String)')
 } else {
-  console.log('📦 Database: Local PostgreSQL (Development)')
+  console.log('📦 Database: Local PostgreSQL')
 }
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
@@ -61,18 +47,21 @@ const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8080',
 
   // Database Configuration
-  // Uses DB_PROVIDER flag to determine which configuration to use
+  // Supports both connection string (DATABASE_URL) or individual parameters
   database: (() => {
-    if (useSupabase) {
-      // Supabase configuration (connection string)
+    if (process.env.DATABASE_URL) {
+      // Connection string mode (e.g., Neon, Supabase, etc.)
+      const url = new URL(process.env.DATABASE_URL);
+      const sslMode = url.searchParams.get('sslmode') || 'require';
+      
       return {
         url: process.env.DATABASE_URL,
         dialect: 'postgres',
         dialectOptions: {
-          ssl: {
+          ssl: sslMode === 'require' || sslMode === 'prefer' ? {
             require: true,
-            rejectUnauthorized: false // Supabase requires SSL
-          }
+            rejectUnauthorized: false
+          } : false
         },
         logging: process.env.NODE_ENV === 'development' ? console.log : false,
         pool: {
@@ -81,9 +70,9 @@ const config = {
           acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10),
           idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10)
         }
-      }
+      };
     } else {
-      // Local PostgreSQL configuration (individual parameters)
+      // Individual parameters mode (local PostgreSQL)
       return {
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432', 10),
@@ -101,7 +90,7 @@ const config = {
           acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10),
           idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10)
         }
-      }
+      };
     }
   })(),
 
@@ -137,11 +126,5 @@ const config = {
 const ProviderManager = require('./providers/ProviderManager')
 config.providerManager = new ProviderManager(config)
 
-// Export database provider info for use in other modules
-config.databaseProvider = {
-  provider: dbProvider,
-  useSupabase,
-  useLocal
-}
 
 module.exports = config;

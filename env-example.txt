@@ -3,20 +3,15 @@ PORT=3001
 FRONTEND_URL=http://localhost:8080
 
 # Database Configuration
-# Set DB_PROVIDER to 'local' for development or 'supabase' for production
-DB_PROVIDER=local
+# Option 1: Use connection string (for Neon, Supabase, or other cloud PostgreSQL)
+# DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
 
-# Development (Local PostgreSQL) - Required when DB_PROVIDER=local
+# Option 2: Use individual parameters (for local PostgreSQL)
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=sessions_db
 DB_USER=postgres
 DB_PASSWORD=your_local_password
-
-# Production (Supabase) - Required when DB_PROVIDER=supabase
-# Get connection string from: Supabase Dashboard > Settings > Database > Connection string > URI
-# Format: postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
-# DATABASE_URL=postgresql://postgres:your_supabase_password@db.your_project_ref.supabase.co:5432/postgres
 
 # Agora Configuration (Required)
 # Get these from your Agora Console: https://console.agora.io/

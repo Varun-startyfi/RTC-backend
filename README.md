@@ -4,7 +4,6 @@ A Node.js/Express backend service for managing live video sessions with PostgreS
 
 ## Features
 
-- **Flexible Database Support**: Choose between Local PostgreSQL or Supabase via `DB_PROVIDER` flag
 - **PostgreSQL Database**: Persistent storage for sessions and participants
 - **Session Management**: Create, join, and end video sessions
 - **Provider Abstraction**: Extensible architecture supporting multiple video providers
@@ -15,7 +14,7 @@ A Node.js/Express backend service for managing live video sessions with PostgreS
 ## Prerequisites
 
 - **Node.js** 16+
-- **PostgreSQL** 12+ (for local development) OR **Supabase** account (for production)
+- **PostgreSQL** 12+
 
 ## Installation
 
@@ -24,11 +23,7 @@ A Node.js/Express backend service for managing live video sessions with PostgreS
 npm install
 ```
 
-### 2. Setup Database
-
-The application supports two database providers controlled by the `DB_PROVIDER` environment variable:
-
-#### Option A: Local PostgreSQL (Development)
+### 2. Setup PostgreSQL Database
 
 **Using PostgreSQL command line:**
 ```bash
@@ -48,12 +43,6 @@ docker run --name postgres-sessions -e POSTGRES_PASSWORD=password -e POSTGRES_DB
 docker exec -i postgres-sessions psql -U postgres -d sessions_db < setup-db.sql
 ```
 
-#### Option B: Supabase (Production)
-
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Get your connection string from: **Settings > Database > Connection string > URI**
-3. Run the initialization script: `node init-db.js`
-
 ### 3. Configure Environment Variables
 
 Copy the example environment file:
@@ -61,34 +50,18 @@ Copy the example environment file:
 cp env-example.txt .env
 ```
 
-**For Local PostgreSQL (Development):**
+Edit `.env` with your values:
 ```bash
 # Server Configuration
 PORT=3001
 FRONTEND_URL=http://localhost:8080
 
 # Database Configuration
-DB_PROVIDER=local
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=sessions_db
 DB_USER=postgres
 DB_PASSWORD=password
-
-# Agora Configuration
-AGORA_APP_ID=your_agora_app_id_here
-AGORA_APP_CERTIFICATE=your_agora_app_certificate_here
-```
-
-**For Supabase (Production):**
-```bash
-# Server Configuration
-PORT=3001
-FRONTEND_URL=http://localhost:8080
-
-# Database Configuration
-DB_PROVIDER=supabase
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 
 # Agora Configuration
 AGORA_APP_ID=your_agora_app_id_here
@@ -134,13 +107,11 @@ npm start
 |----------|-------------|---------|----------|
 | `PORT` | Server port | 3001 | No |
 | `FRONTEND_URL` | Frontend URL for CORS | http://localhost:8080 | No |
-| `DB_PROVIDER` | Database provider: `local` or `supabase` | local | No |
-| `DATABASE_URL` | Supabase connection string (when `DB_PROVIDER=supabase`) | - | Yes (if Supabase) |
-| `DB_HOST` | PostgreSQL host (when `DB_PROVIDER=local`) | localhost | Yes (if local) |
-| `DB_PORT` | PostgreSQL port (when `DB_PROVIDER=local`) | 5432 | No |
-| `DB_NAME` | Database name (when `DB_PROVIDER=local`) | sessions_db | Yes (if local) |
-| `DB_USER` | Database user (when `DB_PROVIDER=local`) | postgres | Yes (if local) |
-| `DB_PASSWORD` | Database password (when `DB_PROVIDER=local`) | - | Yes (if local) |
+| `DB_HOST` | PostgreSQL host | localhost | No |
+| `DB_PORT` | PostgreSQL port | 5432 | No |
+| `DB_NAME` | Database name | sessions_db | Yes |
+| `DB_USER` | Database user | postgres | Yes |
+| `DB_PASSWORD` | Database password | - | Yes |
 | `AGORA_APP_ID` | Agora App ID | - | Yes |
 | `AGORA_APP_CERTIFICATE` | Agora App Certificate | - | Yes |
 
@@ -149,22 +120,15 @@ npm start
 - `npm run dev` - Start development server with nodemon
 - `npm test` - Run tests
 - Database schema automatically syncs on startup (development mode)
-- Set `DB_PROVIDER=local` for local development with PostgreSQL
-- Set `DB_PROVIDER=supabase` for production with Supabase
 
 ## Database Architecture
 
 The application uses a modular database architecture:
 
-- **`models/index.js`**: Main entry point that selects the appropriate database module based on `DB_PROVIDER` flag
-- **`models/supabase.js`**: Supabase-specific database configuration and connection
+- **`models/index.js`**: Main entry point that loads the database module
 - **`models/local.js`**: Local PostgreSQL database configuration and connection
 - **`models/Session.js`**: Session model definition
 - **`models/Participant.js`**: Participant model definition
-
-The `DB_PROVIDER` environment variable controls which database module is loaded:
-- `local` → Uses `models/local.js` (PostgreSQL with individual connection parameters)
-- `supabase` → Uses `models/supabase.js` (Supabase with connection string)
 
 ## Production Deployment
 
