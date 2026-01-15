@@ -11,12 +11,23 @@ const path = require('path');
 require('dotenv').config();
 
 async function initDatabase() {
+  // Validate required database environment variables
+  const requiredDbVars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD']
+  const missingVars = requiredDbVars.filter(varName => !process.env[varName])
+  
+  if (missingVars.length > 0) {
+    console.error('❌ Missing required database environment variables:')
+    missingVars.forEach(varName => console.error(`   - ${varName}`))
+    console.error('\nPlease create a .env file based on env-example.txt and fill in all required values.')
+    process.exit(1)
+  }
+
   const config = {
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'sessions_db',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'password',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    database: process.env.DB_NAME, // Required - no default
+    user: process.env.DB_USER, // Required - no default
+    password: process.env.DB_PASSWORD, // Required - no default
   };
 
   console.log('🔄 Initializing database...');
@@ -87,7 +98,7 @@ async function initDatabase() {
     console.log('\n🔧 Troubleshooting:');
     console.log('1. Make sure PostgreSQL is running');
     console.log('2. Check your .env file has correct database credentials');
-    console.log('3. Try running: psql -U postgres -c "CREATE DATABASE sessions_db;"');
+    console.log(`3. Try running: psql -U ${config.user} -c "CREATE DATABASE ${config.database};"`);
     process.exit(1);
   }
 }

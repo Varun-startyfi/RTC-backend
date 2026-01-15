@@ -1,10 +1,12 @@
+// Load environment variables FIRST, before importing config
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const config = require('./config');
 const { testConnection, syncDatabase, Session, Participant } = require('./models');
-require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);

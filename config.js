@@ -1,4 +1,32 @@
-// Configuration file - in production, use environment variables
+// Configuration file - all values must come from environment variables
+// Copy env-example.txt to .env and fill in your values
+
+// Load environment variables if not already loaded
+if (!process.env.AGORA_APP_ID && !process.env.DB_NAME) {
+  try {
+    require('dotenv').config();
+  } catch (err) {
+    // dotenv might not be available, that's okay if loaded elsewhere
+  }
+}
+
+// Validate required environment variables
+const requiredEnvVars = [
+  'AGORA_APP_ID',
+  'AGORA_APP_CERTIFICATE',
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD'
+]
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:')
+  missingVars.forEach(varName => console.error(`   - ${varName}`))
+  console.error('\nPlease create a .env file based on env-example.txt and fill in all required values.')
+  process.exit(1)
+}
+
 const config = {
   port: process.env.PORT || 3001,
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8080',
@@ -6,17 +34,17 @@ const config = {
   // Database Configuration
   database: {
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'rtcapp-sessions2',
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '1234',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    database: process.env.DB_NAME, // Required - no default
+    username: process.env.DB_USER, // Required - no default
+    password: process.env.DB_PASSWORD, // Required - no default
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+      max: parseInt(process.env.DB_POOL_MAX || '5', 10),
+      min: parseInt(process.env.DB_POOL_MIN || '0', 10),
+      acquire: parseInt(process.env.DB_POOL_ACQUIRE || '30000', 10),
+      idle: parseInt(process.env.DB_POOL_IDLE || '10000', 10)
     }
   },
 
@@ -25,8 +53,8 @@ const config = {
     agora: {
       enabled: true,
       config: {
-        appId: process.env.AGORA_APP_ID || 'd4db3ea489a64f7e9096ad79c805e4fa',
-        appCertificate: process.env.AGORA_APP_CERTIFICATE || 'e4e3ef643c9245a1a3b2744156fa2d26'
+        appId: process.env.AGORA_APP_ID, // Required - no default
+        appCertificate: process.env.AGORA_APP_CERTIFICATE // Required - no default
       }
     },
     // Add other providers here
