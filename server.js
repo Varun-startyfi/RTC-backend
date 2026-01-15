@@ -108,7 +108,10 @@ const startServer = async () => {
     // Start the server
     server.listen(PORT, () => {
       console.log(`Sessions backend server running on port ${PORT}`);
-      console.log(`Database: ${config.database.database} on ${config.database.host}:${config.database.port}`);
+      // Get connection info from database module (handles both Supabase and local)
+      const { getConnectionInfo } = require('./models');
+      const dbInfo = getConnectionInfo();
+      console.log(`Database: ${dbInfo.provider} - ${dbInfo.database || 'N/A'} on ${dbInfo.host}:${dbInfo.port || 'N/A'}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

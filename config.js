@@ -137,4 +137,11 @@ const config = {
 const ProviderManager = require('./providers/ProviderManager')
 config.providerManager = new ProviderManager(config)
 
+// Export database provider info for use in other modules
+config.databaseProvider = {
+  provider: dbProvider,
+  useSupabase,
+  useLocal
+}
+
 module.exports = config;

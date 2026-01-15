@@ -1,54 +1,33 @@
-const { Sequelize } = require('sequelize');
 const config = require('../config');
 
-// Initialize Sequelize with database configuration
-// Supports both connection string (for Supabase) and individual parameters
-let sequelize;
+/**
+ * Database Models Index
+ * Uses DB_PROVIDER flag to determine which database provider to use:
+ * - 'supabase' -> uses models/supabase.js
+ * - 'local' -> uses models/local.js
+ */
 
-if (config.database.url) {
-  // Use connection string (Supabase style: postgresql://user:password@host:port/database)
-  sequelize = new Sequelize(config.database.url, {
-    dialect: 'postgres',
-    dialectOptions: config.database.dialectOptions || {},
-    logging: config.database.logging,
-    pool: config.database.pool,
-    define: {
-      timestamps: true,
-      underscored: true,
-    },
-  });
+// Determine database provider from config (which already validates the flag)
+const { databaseProvider } = config;
+const { provider: dbProvider, useSupabase, useLocal } = databaseProvider;
+
+// Load appropriate database module based on flag
+let dbModule;
+if (useSupabase) {
+  dbModule = require('./supabase');
+} else if (useLocal) {
+  dbModule = require('./local');
 } else {
-  // Use individual parameters
-  sequelize = new Sequelize(
-    config.database.database,
-    config.database.username,
-    config.database.password,
-    {
-      host: config.database.host,
-      port: config.database.port,
-      dialect: config.database.dialect,
-      dialectOptions: config.database.dialectOptions || {},
-      logging: config.database.logging,
-      pool: config.database.pool,
-      define: {
-        timestamps: true,
-        underscored: true,
-      },
-    }
-  );
+  // This should not happen as config.js validates it, but keep as safety check
+  console.error(`❌ Invalid DB_PROVIDER: "${dbProvider}"`);
+  console.error('   Valid options: "local" (PostgreSQL) or "supabase"');
+  process.exit(1);
 }
 
-// Test database connection
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
-  } catch (error) {
-    console.error('Unable to connect to the database:', error);
-  }
-};
+// Extract database connection and utilities
+const { sequelize, Sequelize, testConnection, syncDatabase, getConnectionInfo } = dbModule;
 
-// Import models
+// Import models using the appropriate sequelize instance
 const Session = require('./Session')(sequelize);
 const Participant = require('./Participant')(sequelize);
 
@@ -64,21 +43,12 @@ Participant.belongsTo(Session, {
   as: 'session'
 });
 
-// Sync database (create tables if they don't exist)
-const syncDatabase = async () => {
-  try {
-    await sequelize.sync({ alter: true }); // Use alter: true for development
-    console.log('Database synchronized successfully.');
-  } catch (error) {
-    console.error('Error synchronizing database:', error);
-  }
-};
-
 module.exports = {
   sequelize,
   Sequelize,
   testConnection,
   syncDatabase,
+  getConnectionInfo,
   Session,
   Participant
 };

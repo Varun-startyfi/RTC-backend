@@ -1,0 +1,74 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: sessions-backend
+    env: node
+    region: oregon  # Change to your preferred region (oregon, frankfurt, singapore, etc.)
+    plan: starter  # Change to 'standard' or 'pro' for production
+    buildCommand: cd sessions-backend && npm install
+    startCommand: cd sessions-backend && npm start
+    healthCheckPath: /health
+    envVars:
+      # Server Configuration
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      
+      # Frontend URL - Update this with your frontend URL after deployment
+      - key: FRONTEND_URL
+        value: https://your-frontend-url.onrender.com  # Update this!
+      
+      # Database Configuration
+      # Option 1: Use Render's managed PostgreSQL (recommended)
+      # If using Render PostgreSQL, uncomment the DB_PROVIDER line below and comment out Supabase section
+      # Then link the database service in Render dashboard or use DATABASE_URL from the database service
+      # - key: DB_PROVIDER
+      #   value: local
+      # - key: DB_HOST
+      #   fromDatabase:
+      #     name: sessions-db
+      #     property: host
+      # - key: DB_PORT
+      #   fromDatabase:
+      #     name: sessions-db
+      #     property: port
+      # - key: DB_NAME
+      #   fromDatabase:
+      #     name: sessions-db
+      #     property: database
+      # - key: DB_USER
+      #   fromDatabase:
+      #     name: sessions-db
+      #     property: user
+      # - key: DB_PASSWORD
+      #   fromDatabase:
+      #     name: sessions-db
+      #     property: password
+      
+      # Option 2: Use Supabase (currently active)
+      # Comment out this section if using Render's managed PostgreSQL
+      - key: DB_PROVIDER
+        value: supabase
+      - key: DATABASE_URL
+        sync: false  # Set this manually in Render dashboard with your Supabase connection string
+      
+      # Agora Configuration (Required)
+      # Set these manually in Render dashboard
+      - key: AGORA_APP_ID
+        sync: false  # Set this manually in Render dashboard
+      - key: AGORA_APP_CERTIFICATE
+        sync: false  # Set this manually in Render dashboard
+
+  # Optional: Render Managed PostgreSQL Database
+  # Uncomment this section if you want to use Render's managed PostgreSQL instead of Supabase
+  # After creating the database, you'll need to:
+  # 1. Run the init-db script: In Render dashboard, go to your web service > Shell > run: cd sessions-backend && npm run init-db
+  # 2. Update the web service env vars to use the database connection (see Option 1 above)
+  # - type: pspg
+  #   name: sessions-db
+  #   plan: starter  # Change to 'standard' or 'pro' for production
+  #   region: oregon  # Should match your web service region
+  #   databaseName: sessions_db
+  #   user: sessions_user
+
