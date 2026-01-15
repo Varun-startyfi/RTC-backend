@@ -2,12 +2,21 @@
 PORT=3001
 FRONTEND_URL=http://localhost:8080
 
-# Database Configuration (Required)
+# Database Configuration
+# Set DB_PROVIDER to 'local' for development or 'supabase' for production
+DB_PROVIDER=local
+
+# Development (Local PostgreSQL) - Required when DB_PROVIDER=local
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=your_database_name
-DB_USER=your_database_user
-DB_PASSWORD=your_database_password
+DB_NAME=sessions_db
+DB_USER=postgres
+DB_PASSWORD=your_local_password
+
+# Production (Supabase) - Required when DB_PROVIDER=supabase
+# Get connection string from: Supabase Dashboard > Settings > Database > Connection string > URI
+# Format: postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+# DATABASE_URL=postgresql://postgres:your_supabase_password@db.your_project_ref.supabase.co:5432/postgres
 
 # Agora Configuration (Required)
 # Get these from your Agora Console: https://console.agora.io/
