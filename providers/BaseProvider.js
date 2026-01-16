@@ -1,43 +1,46 @@
 /**
- * Base class for video conferencing providers
- * Provides a common interface for different video providers
+ * Base Provider Class
+ * Abstract base class for video provider implementations
  */
 class BaseProvider {
   constructor(config) {
-    this.config = config
-    this.name = 'base'
+    this.config = config;
+    this.name = 'base';
   }
 
   /**
-   * Generate access token for a session
-   * @param {string} sessionId - The session/channel identifier
-   * @param {string} userId - The user identifier
-   * @param {string} role - The user role (host, participant, etc.)
-   * @returns {Promise<Object>} Token data with token, appId, userId, etc.
-   */
-  async generateToken(sessionId, userId, role) {
-    throw new Error('generateToken must be implemented by provider')
-  }
-
-  /**
-   * Validate if the provider is properly configured
-   * @returns {boolean} True if configured correctly
+   * Check if provider is properly configured
+   * @returns {boolean}
    */
   isConfigured() {
-    throw new Error('isConfigured must be implemented by provider')
+    throw new Error('isConfigured() must be implemented by subclass');
   }
 
   /**
-   * Get provider-specific metadata
-   * @returns {Object} Provider metadata
+   * Generate access token for a user in a session
+   * @param {string} sessionId - Session/channel ID
+   * @param {string|number} userId - User ID
+   * @param {string} role - User role (host, participant, audience)
+   * @returns {Promise<Object>} Token object with token, appId, userId, etc.
+   */
+  async generateToken(sessionId, userId, role = 'participant') {
+    throw new Error('generateToken() must be implemented by subclass');
+  }
+
+  /**
+   * Get provider metadata and capabilities
+   * @returns {Object} Metadata object
    */
   getMetadata() {
     return {
       name: this.name,
-      version: '1.0.0',
-      features: []
-    }
+      configured: this.isConfigured(),
+      features: [],
+      maxParticipants: 0,
+      supportedPlatforms: []
+    };
   }
 }
 
-module.exports = BaseProvider
+module.exports = BaseProvider;
+

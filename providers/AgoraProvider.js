@@ -1,4 +1,4 @@
-const { RtcTokenBuilder, RtcRole, RtmTokenBuilder } = require('agora-access-token')
+const { RtcTokenBuilder, RtcRole, RtmTokenBuilder, RtmRole } = require('agora-access-token')
 const BaseProvider = require('./BaseProvider')
 
 class AgoraProvider extends BaseProvider {
@@ -39,9 +39,8 @@ class AgoraProvider extends BaseProvider {
     // For web clients, use buildTokenWithAccount with string userId
     // For native clients, use buildTokenWithUid with numeric uid
     let token
-    if (typeof userId === 'string' && userId !== '0' && userId !== 0) {
+    if (typeof userId === 'string' && userId !== '0') {
       // Use account-based token for web clients
-      console.log('Using buildTokenWithAccount for string userId:', userId)
       token = RtcTokenBuilder.buildTokenWithAccount(
         this.config.appId,
         this.config.appCertificate,
@@ -54,7 +53,6 @@ class AgoraProvider extends BaseProvider {
     } else {
       // Use UID-based token (for numeric UIDs or when UID should be assigned)
       const numericUid = typeof userId === 'number' ? userId : 0
-      console.log('Using buildTokenWithUid for numeric UID:', numericUid)
       token = RtcTokenBuilder.buildTokenWithUid(
         this.config.appId,
         this.config.appCertificate,
@@ -66,47 +64,34 @@ class AgoraProvider extends BaseProvider {
       )
     }
 
-    console.log('Token generated successfully, length:', token ? token.length : 0)
+    // Generate RTM token for chat functionality
+    const rtmExpirationTimeInSeconds = currentTimestamp + (3600 * 24) // 24 hours from now
+    
+    let rtmToken
+    try {
+      // RTM tokens use RtmTokenBuilder
+      // For RTM, we always use the userId as a string (account-based)
+      const rtmUserId = typeof userId === 'string' ? userId : String(userId)
+      rtmToken = RtmTokenBuilder.buildToken(
+        this.config.appId,
+        this.config.appCertificate,
+        rtmUserId,
+        RtmRole.Rtm_User,
+        rtmExpirationTimeInSeconds
+      )
+    } catch (rtmError) {
+      console.warn('Failed to generate RTM token:', rtmError.message)
+      // Don't fail the whole request if RTM token generation fails
+      rtmToken = null
+    }
 
     return {
-      token,
+      token, // RTC token for video/audio
+      rtmToken, // RTM token for chat
       appId: this.config.appId,
       userId: userId, // Return the userId (string or number)
       role: role,
       provider: this.name,
-      expiresIn: 3600 * 24 // 24 hours in seconds
-    }
-  }
-
-  async generateRtmToken(userId) {
-    if (!this.isConfigured()) {
-      throw new Error('Agora provider is not properly configured')
-    }
-
-    // Calculate expiration time (24 hours from now)
-    const currentTimestamp = Math.floor(Date.now() / 1000)
-    const tokenExpirationTimeInSeconds = currentTimestamp + (3600 * 24) // 24 hours from now
-
-    console.log('Generating Agora RTM token:', {
-      userId,
-      appId: this.config.appId,
-      expirationTime: new Date(tokenExpirationTimeInSeconds * 1000).toISOString()
-    })
-
-    // Generate RTM token
-    const rtmToken = RtmTokenBuilder.buildToken(
-      this.config.appId,
-      this.config.appCertificate,
-      userId.toString(), // RTM uses string userId
-      tokenExpirationTimeInSeconds
-    )
-
-    console.log('RTM token generated successfully, length:', rtmToken ? rtmToken.length : 0)
-
-    return {
-      token: rtmToken,
-      appId: this.config.appId,
-      userId: userId.toString(),
       expiresIn: 3600 * 24 // 24 hours in seconds
     }
   }

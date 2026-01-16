@@ -1,95 +1,61 @@
 const { DataTypes } = require('sequelize');
 
+/**
+ * Session Model
+ * Represents a video session
+ */
 module.exports = (sequelize) => {
   const Session = sequelize.define('Session', {
     id: {
       type: DataTypes.UUID,
-      primaryKey: true,
       defaultValue: DataTypes.UUIDV4,
-      allowNull: false
+      primaryKey: true
     },
-    createdBy: {
+    hostId: {
       type: DataTypes.STRING,
       allowNull: false,
-      comment: 'User ID of the session creator'
+      field: 'host_id'
     },
-    creatorName: {
+    hostName: {
       type: DataTypes.STRING,
       allowNull: false,
-      comment: 'Display name of the session creator'
+      field: 'host_name'
     },
-    name: {
+    title: {
       type: DataTypes.STRING,
-      allowNull: true,
-      defaultValue: null,
-      comment: 'Name/title of the session'
-    },
-    status: {
-      type: DataTypes.ENUM('active', 'ended', 'expired'),
-      defaultValue: 'active',
-      allowNull: false
+      allowNull: true
     },
     provider: {
       type: DataTypes.STRING,
-      defaultValue: 'agora',
       allowNull: false,
-      comment: 'Video provider used for this session'
+      defaultValue: 'agora'
     },
-    maxParticipants: {
-      type: DataTypes.INTEGER,
-      defaultValue: 17, // Agora's default limit
+    channelName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'channel_name'
+    },
+    status: {
+      type: DataTypes.ENUM('active', 'ended', 'scheduled'),
+      defaultValue: 'active',
       allowNull: false
     },
-    settings: {
-      type: DataTypes.JSONB,
-      defaultValue: {},
-      allowNull: false,
-      comment: 'Additional session settings (JSON)'
+    startedAt: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+      field: 'started_at'
     },
     endedAt: {
       type: DataTypes.DATE,
       allowNull: true,
-      comment: 'Timestamp when session was ended'
+      field: 'ended_at'
     }
   }, {
     tableName: 'sessions',
-    indexes: [
-      {
-        fields: ['status']
-      },
-      {
-        fields: ['created_by']
-      },
-      {
-        fields: ['created_at']
-      }
-    ]
+    underscored: true,
+    timestamps: true
   });
-
-  // Instance methods
-  Session.prototype.isActive = function() {
-    return this.status === 'active';
-  };
-
-  Session.prototype.endSession = function() {
-    this.status = 'ended';
-    this.endedAt = new Date();
-    return this.save();
-  };
-
-  Session.prototype.getActiveParticipants = async function() {
-    return await this.getParticipants({
-      where: { status: 'active' }
-    });
-  };
-
-  Session.prototype.addParticipant = async function(participantData) {
-    const Participant = sequelize.models.Participant;
-    return await Participant.create({
-      ...participantData,
-      sessionId: this.id
-    });
-  };
 
   return Session;
 };
+

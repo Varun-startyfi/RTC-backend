@@ -1,72 +1,102 @@
-const AgoraProvider = require('./AgoraProvider')
+const AgoraProvider = require('./AgoraProvider');
 
+/**
+ * Provider Manager
+ * Manages multiple video provider implementations
+ */
 class ProviderManager {
   constructor(config) {
-    this.config = config
-    this.providers = new Map()
-    this.defaultProvider = null
-
-    this.initializeProviders()
+    this.config = config;
+    this.providers = new Map();
+    this.defaultProvider = null;
+    this.initializeProviders();
   }
 
+  /**
+   * Initialize all enabled providers
+   */
   initializeProviders() {
+    const { providers: providerConfig } = this.config;
+
     // Initialize Agora provider
-    if (this.config.providers.agora.enabled) {
-      const agoraProvider = new AgoraProvider(this.config.providers.agora.config)
-      if (agoraProvider.isConfigured()) {
-        this.providers.set('agora', agoraProvider)
-        if (!this.defaultProvider) {
-          this.defaultProvider = 'agora'
-        }
+    if (providerConfig.agora?.enabled) {
+      const agoraProvider = new AgoraProvider(providerConfig.agora.config);
+      this.providers.set('agora', agoraProvider);
+      if (!this.defaultProvider) {
+        this.defaultProvider = agoraProvider;
       }
     }
 
     // Add other providers here as they are implemented
-    // if (this.config.providers.zoom.enabled) {
-    //   const zoomProvider = new ZoomProvider(this.config.providers.zoom.config)
-    //   this.providers.set('zoom', zoomProvider)
+    // if (providerConfig.zoom?.enabled) {
+    //   const zoomProvider = new ZoomProvider(providerConfig.zoom.config);
+    //   this.providers.set('zoom', zoomProvider);
     // }
 
-    if (this.providers.size === 0) {
-      console.warn('No video providers are properly configured!')
-    }
+    // if (providerConfig.twilio?.enabled) {
+    //   const twilioProvider = new TwilioProvider(providerConfig.twilio.config);
+    //   this.providers.set('twilio', twilioProvider);
+    // }
   }
 
-  getProvider(providerName = null) {
-    const name = providerName || this.defaultProvider
-    const provider = this.providers.get(name)
+  /**
+   * Get a provider by name
+   * @param {string} name - Provider name
+   * @returns {BaseProvider|null}
+   */
+  getProvider(name) {
+    return this.providers.get(name) || null;
+  }
+
+  /**
+   * Get the default provider
+   * @returns {BaseProvider|null}
+   */
+  getDefaultProvider() {
+    return this.defaultProvider;
+  }
+
+  /**
+   * Get all available providers
+   * @returns {Array<BaseProvider>}
+   */
+  getAllProviders() {
+    return Array.from(this.providers.values());
+  }
+
+  /**
+   * Check if a provider is available
+   * @param {string} name - Provider name
+   * @returns {boolean}
+   */
+  hasProvider(name) {
+    return this.providers.has(name);
+  }
+
+  /**
+   * Generate token using specified provider or default
+   * @param {string} providerName - Provider name (optional, uses default if not provided)
+   * @param {string} sessionId - Session/channel ID
+   * @param {string|number} userId - User ID
+   * @param {string} role - User role
+   * @returns {Promise<Object>}
+   */
+  async generateToken(providerName, sessionId, userId, role = 'participant') {
+    const provider = providerName 
+      ? this.getProvider(providerName) 
+      : this.getDefaultProvider();
 
     if (!provider) {
-      throw new Error(`Provider '${name}' not found or not configured`)
+      throw new Error(`Provider ${providerName || 'default'} is not available`);
     }
 
-    return provider
-  }
-
-  getAvailableProviders() {
-    const available = []
-    for (const [name, provider] of this.providers) {
-      available.push({
-        name,
-        metadata: provider.getMetadata(),
-        configured: provider.isConfigured()
-      })
+    if (!provider.isConfigured()) {
+      throw new Error(`Provider ${provider.name} is not properly configured`);
     }
-    return available
-  }
 
-  async generateToken(sessionId, userId, role = 'participant', providerName = null) {
-    const provider = this.getProvider(providerName)
-    return await provider.generateToken(sessionId, userId, role)
-  }
-
-  async generateRtmToken(userId, providerName = null) {
-    const provider = this.getProvider(providerName)
-    if (typeof provider.generateRtmToken !== 'function') {
-      throw new Error(`Provider '${providerName || this.defaultProvider}' does not support RTM token generation`)
-    }
-    return await provider.generateRtmToken(userId)
+    return await provider.generateToken(sessionId, userId, role);
   }
 }
 
-module.exports = ProviderManager
+module.exports = ProviderManager;
+

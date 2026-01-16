@@ -58,14 +58,25 @@ const testConnection = async () => {
 // Sync database schema (create tables if they don't exist)
 const syncDatabase = async () => {
   try {
-    // Use alter: true for development, false for production
-    const alterMode = process.env.NODE_ENV === 'development' && process.env.DB_ALTER !== 'false';
-    await sequelize.sync({ alter: alterMode });
     const dbType = config.database.url ? 'PostgreSQL' : 'Local PostgreSQL';
-    console.log(`✅ ${dbType} database synchronized successfully.`);
+    
+    // In development, use alter mode to update schema
+    // In production, only create if not exists
+    const alterMode = process.env.NODE_ENV === 'development' && process.env.DB_ALTER !== 'false';
+    const forceMode = process.env.DB_FORCE === 'true'; // Only use if explicitly set
+    
+    if (forceMode) {
+      console.log('⚠️  Force mode enabled - dropping and recreating all tables...');
+      await sequelize.sync({ force: true });
+      console.log(`✅ ${dbType} database force-synced (tables recreated).`);
+    } else {
+      await sequelize.sync({ alter: alterMode });
+      console.log(`✅ ${dbType} database synchronized successfully (alter: ${alterMode}).`);
+    }
   } catch (error) {
     const dbType = config.database.url ? 'PostgreSQL' : 'Local PostgreSQL';
     console.error(`❌ Error synchronizing ${dbType} database:`, error.message);
+    console.error('Full error:', error);
     throw error;
   }
 };
